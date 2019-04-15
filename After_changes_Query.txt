@@ -1,0 +1,78 @@
+SELECT PREREL.PROJECTID        AS "projectId",
+       PREREL.WBSCODE,
+       PREREL.WBSNAME,
+       PREREL.ID               AS "activityId",
+       PREREL.objectId         AS "OriginalACTOBJECTID",
+       PREREL.OBJECTID         AS "successorActivityObjectId",
+       P6ACT.ObjectID          AS "predecessorActivityObjectId",
+       P6ACT.NAME,
+       PREREL.PREDECESSOR_LAG  AS "lag",
+       PREREL.PREDECESSOR_TYPE AS "type",
+       PREREL.TEMPLATE_ID,
+       PREREL.SOURCE
+  FROM (SELECT P.PROJECTID,
+               P.WBSCODE,
+               P.WBSNAME,
+               P.ID,
+               P.NAME,
+               P.OBJECTID,
+              REL.PREDECESSOR_MS_ACT_ID,
+               REL.PREDECESSOR_MS_ACT_NAME,
+               REL.PREDECESSOR_LAG,
+               REL.PREDECESSOR_TYPE,
+               REL.TEMPLATE_ID,
+               U.SOURCE
+
+          FROM P6_ACTIVITY  P
+                           JOIN
+                      UNI_ESTIMATE U
+                          ON     P.PROJECTID = U.PROJECT_NUMBER
+                              AND p.cbscode <> 'null'
+                              AND p.pif_status = 'New'    
+        
+               JOIN P6_Relationship_mapping REL
+                   ON     P.WBSCODE = REL.wbs_id
+                      AND U.Template_id = REL.TEMPLATE_ID) PREREL
+       JOIN P6_ACTIVITY P6ACT
+           ON     PREREL.PREDECESSOR_MS_ACT_NAME = P6ACT.NAME
+              AND PREREL.PROJECTID = P6ACT.ProjectID
+              AND PREREL.source NOT IN ('PCO LI', 'ESCHG LI')
+UNION ALL
+SELECT PREREL.PROJECTID      AS "projectId",
+       PREREL.WBSCODE,
+      PREREL.WBSNAME,
+       PREREL.ID             AS "activityId",
+       PREREL.objectId       AS "OriginalACTOBJECTID",
+       P6ACT.ObjectID        AS "successorActivityObjectId",
+       PREREL.OBJECTID       AS "predecessorActivityObjectId",
+       P6ACT.NAME,
+       PREREL.SUCCESSOR_LAG  AS "lag",
+       PREREL.SUCCESSOR_TYPE AS "type",
+       PREREL.TEMPLATE_ID,
+       PREREL.source
+  FROM (SELECT P.PROJECTID,
+               P.WBSCODE,
+               P.WBSNAME,
+               P.ID,
+               P.NAME,
+               P.OBJECTID,
+               REL.SUCCESSOR_MS_ACT_ID,
+               REL.SUCCESSOR_MS_ACT_NAME,
+               REL.SUCCESSOR_LAG,
+               REL.SUCCESSOR_TYPE,
+               REL.TEMPLATE_ID,
+               U.SOURCE
+          FROM P6_ACTIVITY  P
+                           JOIN
+                      UNI_ESTIMATE U
+                          ON     P.PROJECTID = U.PROJECT_NUMBER
+                              AND p.cbscode <> 'null'
+                              AND p.pif_status = 'New'                 
+                                                      
+               JOIN P6_Relationship_mapping REL
+                   ON     P.WBSCODE = REL.wbs_id
+                      AND U.Template_id = REL.TEMPLATE_ID) PREREL
+       JOIN P6_ACTIVITY P6ACT
+           ON     PREREL.SUCCESSOR_MS_ACT_NAME = P6ACT.NAME
+              AND PREREL.PROJECTID = P6ACT.ProjectID
+              AND PREREL.source NOT IN ('PCO LI', 'ESCHG LI')
