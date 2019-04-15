@@ -1,0 +1,202 @@
+---CID Updates----
+SELECT
+P.PID  										PROJECT_ID,
+'CID'  										TRANTYPE,
+'CCO'										BPNAME,
+NVL(I.esc_CID_Dataconversion,P.ESC_OPPYNUM_SN) 					CID,
+C.RECORD_NO 									BPRECORDNO,
+'N/A'  										PID,
+'0'	 									WPSITEID,
+'0'										WPREVSTREAM,
+C.UCOAMOUNTOFTHISCOCA   							SELLPRICE,
+'N/A'  										EXTCOSTCAT,
+'N/A'  										WPTITLE,
+CP.ESC_IP_CUSTOMERACC_TXT 							CUSTACCTNO,
+I.ESC_PI_PROJECTTYPE_PD  							PROJECTTYPE,
+CP.ESC_CPD_CONTR_STARTDATE_PKR 							STARTDATE,
+CP.ESC_CPD_CONTRAC_ENDDATE_PKR 							ENDDATE,
+CUR.CURRENCYCODE 								CURRENCYID,
+C.UCONREVISEDCONTCTAMTCA 							TOTALAMOUNT,
+0	  									TOTALLABOR,
+O.ESC_OFFICE_CODE_TXT 								OFFICE_NUMBER,
+'N/A'  										WP_PHASE,
+CP.ESC_PURCHASINGDOCDATE_DOP  							CPD_DATE,
+SUBSTR(C.ESC_CUSTPURDOCNUM_TXT,1,30)							CPD_NUM, --TTP 5698
+P.ESC_PROJECT_NAME  								PROJECT_NAME,
+U.USERNAME  SUBMITTEDBY --TTP5085
+FROM UNIFIER_US_XPTCS P
+LEFT OUTER JOIN UNIFIER_UXCPD2 CP ON CP.PROJECT_ID = P.PID
+LEFT OUTER JOIN UNIFIER_UXOPPYIN I ON I.PROJECT_ID = P.PID
+LEFT OUTER JOIN UNIFIER_UXCCO C ON C.PROJECT_ID = P.PID AND TRIM(C.ESC_CUSTPURDOCNUM_TXT) = TRIM(CP.ESC_CUSTPURDOCNUM_TXT)
+AND CP.ID = C.esc_bv_cpd_pk /* TTP5570 hard join with ID along with CPD name*/
+LEFT OUTER JOIN SYS_USER_INFO U ON U.USERID = C.CREATOR_ID --TTP
+INNER JOIN UNIFIER_SYS_PROJECT_CURRENCY SYS ON SYS.PID = CP.PROJECT_ID AND SYS.ISPROJECTCURRENCY = 1
+INNER JOIN UNIFIER_CURRENCY_INFO CUR ON CUR.ID = SYS.CURRENCYID
+JOIN UNIFIER_US_XOFF O ON O.PID = P.UUU_LOCATION
+WHERE C.RECORD_NO IS NOT NULL
+AND C.STATUS = 'Setup_Processing'
+AND P.UUU_SHELL_STATUS = 1
+UNION ALL
+-----PID Updates-----
+SELECT DISTINCT NVL(WTHEST.PROJECT_ID,NOEST.PROJECT_ID)				PROJECT_ID, 
+		'PID'                                                           TRANTYPE,
+		'PCO'                                                           BPNAME,
+		NVL(WTHEST.CID,NOEST.CID)					CID, 
+		NVL(WTHEST.BPRECORDNO,NOEST.BPRECORDNO)				BPRECORDNO,
+		CASE WHEN NVL(WTHEST.est_req,NOEST.est_req) <> 'YES' THEN  NOEST.PID ELSE WTHEST.PID END PID,
+                CASE WHEN NVL(WTHEST.est_req,NOEST.est_req) <> 'YES' THEN  NOEST.WPSITEID ELSE WTHEST.WPSITEID END WPSITEID,
+		CASE WHEN NVL(WTHEST.est_req,NOEST.est_req) <> 'YES' THEN  NOEST.WPREVSTREAM ELSE WTHEST.WPREVSTREAM END WPREVSTREAM,
+		CASE WHEN NVL(WTHEST.est_req,NOEST.est_req) =  'YES' THEN  NVL(WTHEST.SELLPRICE, NOEST.SELLPRICE) ELSE NVL(NOEST.PCSELLPRICE, WTHEST.PCSELLPRICE) END SELLPRICE,
+		NVL(WTHEST.EXTCOSTCAT, WTHEST.EXTCOSTCAT)			EXTCOSTCAT,
+		CASE WHEN NVL(WTHEST.est_req,NOEST.est_req) <> 'YES' THEN  NOEST.WPTITLE ELSE WTHEST.WPTITLE END WPTITLE,
+		NVL(WTHEST.CUSTACCTNO, WTHEST.CUSTACCTNO)			CUSTACCTNO,
+		NVL(WTHEST.PROJECTTYPE, WTHEST.PROJECTTYPE)			PROJECTTYPE,
+		NVL(WTHEST.STARTDATE, WTHEST.STARTDATE)				STARTDATE,
+		NVL(WTHEST.ENDDATE, WTHEST.ENDDATE)				ENDDATE,
+		NVL(WTHEST.CURRENCYID, WTHEST.CURRENCYID)			CURRENCYID,
+		NVL(WTHEST.TOTALAMOUNT, WTHEST.TOTALAMOUNT)			TOTALAMOUNT,
+		NVL(WTHEST.TOTALLABOR, WTHEST.TOTALLABOR)			TOTALLABOR,
+		NVL(WTHEST.OFFICE_NUMBER, WTHEST.OFFICE_NUMBER)		OFFICE_NUMBER,
+		CASE WHEN NVL(WTHEST.est_req,NOEST.est_req) <> 'YES' THEN  NOEST.WP_PHASE ELSE WTHEST.WP_PHASE END WP_PHASE,
+		NVL(WTHEST.CPD_DATE, WTHEST.CPD_DATE)				CPD_DATE,
+		NVL(WTHEST.CPD_NUM, WTHEST.CPD_NUM)				CPD_NUM,
+		NVL(WTHEST.PROJECT_NAME, WTHEST.PROJECT_NAME)			PROJECT_NAME,
+		'' SUBMITTEDBY --TTP 5085
+FROM
+(SELECT DISTINCT
+P.PID                                                           PROJECT_ID,
+NVL(I.esc_CID_Dataconversion,C.ESC_OPPYNUM_SN)                  CID,
+C.RECORD_NO                                                     BPRECORDNO,
+W.ESC_WP_PS_PID                                                 PID,
+W.esc_SiteID_txt                                                WPSITEID,
+W.esc_wp_RevenueStrm_pd                                         WPREVSTREAM,
+W.esc_WP_SellPrice_cur                                          SELLPRICE,
+PC.esc_pco_sellprice_amt                                        PCSELLPRICE,	
+PCL.esc_cost_external_pd                                        EXTCOSTCAT,
+W.esc_WpkTitle_Txt                                              WPTITLE,
+CP.ESC_IP_CUSTOMERACC_TXT                                     	CUSTACCTNO,
+I.ESC_PI_PROJECTTYPE_PD                                         PROJECTTYPE,
+CP.ESC_CPD_CONTR_STARTDATE_PKR                       		STARTDATE,
+CP.ESC_CPD_CONTRAC_ENDDATE_PKR                      		ENDDATE,
+CUR.CURRENCYCODE                                                CURRENCYID,
+SUM(PCL.esc_rao_assigned_amount)                                TOTALAMOUNT,
+SUM(PCL.esc_pco_laborhours_dec)                                 TOTALLABOR,
+O.ESC_OFFICE_CODE_TXT                                           OFFICE_NUMBER,
+W.esc_wp_wpphase_pd                       			WP_PHASE,
+CP.ESC_PURCHASINGDOCDATE_DOP                          		CPD_DATE,
+SUBSTR(C.ESC_CUSTPURDOCNUM_TXT,1,30)                                      	CPD_NUM, --TTP 5698
+C.esc_OppyName_SN                                               PROJECT_NAME,
+C.esc_oppynum_sn                                                u_proj_id,
+UPPER(PC.esc_pco_estimatereq_y_n_pd )                           est_req 
+FROM UNIFIER_UXCCO_VIEW C
+LEFT OUTER JOIN UNIFIER_UXCCO_LINEITEM_VIEW CL ON CL.RECORD_ID = C.ID
+LEFT OUTER JOIN UNIFIER_UXCPD2_VIEW CP ON CP.record_no = C.esc_bv_cpd_pk AND CP.PROJECT_ID = C.PROJECT_ID
+LEFT OUTER JOIN UNIFIER_UXPCO PC on pC.record_no = cL.esc_cpdco_pco_dp AND PC.PROJECT_ID = C.PROJECT_ID
+LEFT OUTER JOIN UNIFIER_UXPCO_LINEITEM PCL ON PCL.RECORD_ID = PC.ID
+/* LEFT OUTER JOIN UNIFIER_UXWP_LINEITEM WL ON PCL.BITEMID = WL.BITEMID AND PCL.BUDGETID = WL.BUDGETID  AND PCL.LI_NUM = WL.LI_NUM*/ /*TTP5372 + 5404 */
+JOIN UNIFIER_UXWP_VIEW W ON W.PROJECT_ID = C.PROJECT_ID
+AND ((PCL.esc_wpkcreator_txt is not null and W.esc_wpkcreator_txt = PCL.esc_wpkcreator_txt) OR (PCL.esc_wpkcreator_txt is null))
+/*W.esc_wpkcreator_txt = PCL.esc_wpkcreator_txt   AND W.ID = WL.RECORD_ID TTP5404 */
+JOIN UNIFIER_SYS_PROJECT_CURRENCY SYS ON SYS.PID = PC.PROJECT_ID AND SYS.ISPROJECTCURRENCY = 1
+JOIN UNIFIER_CURRENCY_INFO CUR ON CUR.ID = SYS.CURRENCYID
+LEFT OUTER JOIN UNIFIER_US_XPTCS p on p.pid = C.project_id
+LEFT OUTER JOIN UNIFIER_US_XOFF O ON O.PID = P.UUU_LOCATION
+LEFT OUTER JOIN UNIFIER_UXOPPYIN I ON I.PROJECT_ID = C.PROJECT_ID
+WHERE C.STATUS = 'Setup_Processing'
+AND PC.STATUS != 'Terminated'
+AND W.esc_wp_RevenueStrm_pd IS NOT NULL
+AND W.status = 'Open'
+AND PCL.esc_rao_assigned_amount != 0
+GROUP BY
+P.PID,
+C.ESC_CUSTPURDOCNUM_TXT,
+C.esc_OppyName_SN,
+C.ESC_OPPYNUM_SN,
+C.RECORD_NO,
+I.ESC_PI_PROJECTTYPE_PD,
+I.esc_CID_Dataconversion, --ttP 5033
+CUR.CURRENCYCODE,
+O.ESC_OFFICE_CODE_TXT,
+CP.ESC_IP_CUSTOMERACC_TXT,
+CP.ESC_PURCHASINGDOCDATE_DOP,
+CP.ESC_CPD_CONTR_STARTDATE_PKR,
+CP.ESC_CPD_CONTRAC_ENDDATE_PKR,
+W.ESC_WP_PS_PID,
+W.esc_SiteID_txt,
+W.esc_wp_RevenueStrm_pd,
+----PC.esc_pco_sellprice_amt,
+W.esc_WpkTitle_Txt,
+W.esc_wp_wpphase_pd,
+PC.esc_pco_sellprice_amt,
+W.esc_WP_SellPrice_cur, 
+PCL.esc_cost_external_pd,
+PC.esc_pco_estimatereq_y_n_pd) WTHEST
+FULL OUTER JOIN
+(SELECT DISTINCT
+P.PID                                                           PROJECT_ID,
+NVL(I.esc_CID_Dataconversion,C.ESC_OPPYNUM_SN)                  CID,
+C.RECORD_NO                                                     BPRECORDNO,
+W.ESC_WP_PS_PID                                                 PID,
+W.esc_SiteID_txt                                                WPSITEID,
+W.esc_wp_RevenueStrm_pd                                         WPREVSTREAM,
+W.esc_WP_SellPrice_cur                                          SELLPRICE,
+PC.esc_pco_sellprice_amt                                        PCSELLPRICE,
+PCL.esc_cost_external_pd                                        EXTCOSTCAT,
+W.esc_WpkTitle_Txt                                              WPTITLE,
+CP.ESC_IP_CUSTOMERACC_TXT                                     	CUSTACCTNO,
+I.ESC_PI_PROJECTTYPE_PD                                         PROJECTTYPE,
+CP.ESC_CPD_CONTR_STARTDATE_PKR                       		STARTDATE,
+CP.ESC_CPD_CONTRAC_ENDDATE_PKR                      		ENDDATE,
+CUR.CURRENCYCODE                                                CURRENCYID,
+SUM(PCL.esc_rao_assigned_amount)                                TOTALAMOUNT,
+SUM(PCL.esc_pco_laborhours_dec)                                 TOTALLABOR,
+O.ESC_OFFICE_CODE_TXT                                           OFFICE_NUMBER,
+W.esc_wp_wpphase_pd                       			WP_PHASE,
+CP.ESC_PURCHASINGDOCDATE_DOP                          		CPD_DATE,
+SUBSTR(C.ESC_CUSTPURDOCNUM_TXT,1,30)                                      	CPD_NUM, --TTP5698
+C.esc_OppyName_SN                                               PROJECT_NAME,
+C.esc_oppynum_sn                                                u_proj_id,
+UPPER(PC.esc_pco_estimatereq_y_n_pd)                            est_req 
+FROM UNIFIER_UXCCO_VIEW C
+LEFT OUTER JOIN UNIFIER_UXCCO_LINEITEM_VIEW CL ON CL.RECORD_ID = C.ID
+LEFT OUTER JOIN UNIFIER_UXCPD2_VIEW CP ON CP.record_no = C.esc_bv_cpd_pk AND CP.PROJECT_ID = C.PROJECT_ID
+LEFT OUTER JOIN UNIFIER_UXPCO PC on pC.record_no = cL.esc_cpdco_pco_dp AND PC.PROJECT_ID = C.PROJECT_ID
+LEFT OUTER JOIN UNIFIER_UXPCO_LINEITEM PCL ON PCL.RECORD_ID = PC.ID
+LEFT OUTER JOIN UNIFIER_UXWP_VIEW W ON C.ESC_OPPYNUM_SN = W.ESC_OPPYNUM_SN AND  PC.esc_wrk_pkg_pid_pkr = W.ID
+JOIN UNIFIER_SYS_PROJECT_CURRENCY SYS ON SYS.PID = PC.PROJECT_ID AND SYS.ISPROJECTCURRENCY = 1
+JOIN UNIFIER_CURRENCY_INFO CUR ON CUR.ID = SYS.CURRENCYID
+LEFT OUTER JOIN UNIFIER_US_XPTCS p on p.pid = C.project_id
+LEFT OUTER JOIN UNIFIER_US_XOFF O ON O.PID = P.UUU_LOCATION
+LEFT OUTER JOIN UNIFIER_UXOPPYIN I ON I.PROJECT_ID = C.PROJECT_ID
+WHERE C.STATUS = 'Setup_Processing'
+AND PC.STATUS != 'Terminated'
+AND W.esc_wp_RevenueStrm_pd IS NOT NULL
+AND W.status = 'Open'
+AND PCL.esc_rao_assigned_amount != 0
+GROUP BY
+P.PID,
+C.ESC_CUSTPURDOCNUM_TXT,
+C.esc_OppyName_SN,
+C.ESC_OPPYNUM_SN,
+C.RECORD_NO,
+I.ESC_PI_PROJECTTYPE_PD,
+I.esc_CID_Dataconversion, --TTP 5033
+CUR.CURRENCYCODE,
+O.ESC_OFFICE_CODE_TXT,
+CP.ESC_IP_CUSTOMERACC_TXT,
+CP.ESC_PURCHASINGDOCDATE_DOP,
+CP.ESC_CPD_CONTR_STARTDATE_PKR,
+CP.ESC_CPD_CONTRAC_ENDDATE_PKR,
+W.ESC_WP_PS_PID,
+W.esc_SiteID_txt,
+W.esc_wp_RevenueStrm_pd,
+W.esc_WpkTitle_Txt,
+W.esc_wp_wpphase_pd,
+W.esc_WP_SellPrice_cur, 
+PC.esc_pco_sellprice_amt,
+PCL.esc_cost_external_pd,
+PC.esc_pco_estimatereq_y_n_pd) NOEST
+ON WTHEST.CID        = NOEST.CID 		AND
+   WTHEST.PROJECT_ID = NOEST.PROJECT_ID		AND
+   WTHEST.BPRECORDNO = NOEST.BPRECORDNO		AND
+   WTHEST.u_proj_id  = NOEST.u_proj_id
