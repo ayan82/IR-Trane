@@ -1,7 +1,8 @@
 ---CID Updates----
 SELECT
 --P.PID  										PROJECT_ID,
-V.PID                                       PROJECT_ID  --TTPXXX
+--V.PID                                       PROJECT_ID  --TTPXXX
+XX.PID                                       PROJECT_ID --TTPYYYY
 'CID'  										TRANTYPE,
 'CCO'										BPNAME,
 NVL(I.esc_CID_Dataconversion,P.ESC_OPPYNUM_SN) 					CID,
